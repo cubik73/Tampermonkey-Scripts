@@ -3,10 +3,18 @@
 // @namespace    http://tampermonkey.net/
 // @version      0.1
 // @description  Add moveable horizontal and vertical guide lines to webpages
-// @author       You
+// @author       Rob Wood
+// @license      MIT
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=robertwood.me
+// @homepage     https://github.com/cubik73/Tampermonkey-Scripts/
+// @supportURL   https://github.com/cubik73/Tampermonkey-Scripts/issues
+// @updateURL    https://raw.githubusercontent.com/cubik73/Tampermonkey-Scripts/main/guidelines.user.js
+// @downloadURL  https://raw.githubusercontent.com/cubik73/Tampermonkey-Scripts/main/guidelines.user.js
 // @match        *://*/*
 // @grant        none
+// @run-at       document-end
 // ==/UserScript==
+
 
 (function() {
     'use strict';
@@ -65,16 +73,6 @@
             cursor: ew-resize;
             z-index: 9999;
             pointer-events: auto;
-        }
-        .gl-distance-label {
-            position: fixed;
-            background: rgba(255,255,255,0.8);
-            padding: 2px 5px;
-            font-size: 12px;
-            font-family: Arial, sans-serif;
-            color: green;
-            z-index: 10001;
-            pointer-events: none;
         }
         .gl-between-distance {
             position: fixed;
@@ -136,15 +134,8 @@
         line.style.top = yPosition + 'px';
         document.body.appendChild(line);
         
-        const label = document.createElement('div');
-        label.className = 'gl-distance-label';
-        label.style.top = (yPosition - 20) + 'px';
-        label.style.left = '5px';
-        updateHorizontalLabel(label, yPosition);
-        document.body.appendChild(label);
-        
-        makeDraggable(line, 'horizontal', label);
-        guidelines.horizontal.push({line, label, position: yPosition});
+        makeDraggable(line, 'horizontal');
+        guidelines.horizontal.push({line, position: yPosition});
         
         // Update measurement between lines
         updateHorizontalMeasurements();
@@ -157,27 +148,11 @@
         line.style.left = xPosition + 'px';
         document.body.appendChild(line);
         
-        const label = document.createElement('div');
-        label.className = 'gl-distance-label';
-        label.style.left = (xPosition + 5) + 'px';
-        label.style.top = '5px';
-        updateVerticalLabel(label, xPosition);
-        document.body.appendChild(label);
-        
-        makeDraggable(line, 'vertical', label);
-        guidelines.vertical.push({line, label, position: xPosition});
+        makeDraggable(line, 'vertical');
+        guidelines.vertical.push({line, position: xPosition});
         
         // Update measurement between lines
         updateVerticalMeasurements();
-    }
-
-    // Update labels
-    function updateHorizontalLabel(label, position) {
-        label.textContent = position + 'px from top';
-    }
-
-    function updateVerticalLabel(label, position) {
-        label.textContent = position + 'px from left';
     }
 
     // Create/update measurements between horizontal lines
@@ -259,7 +234,7 @@
     }
 
     // Make lines draggable
-    function makeDraggable(element, type, label) {
+    function makeDraggable(element, type) {
         let startX, startY, startPos;
         
         element.addEventListener('mousedown', startDrag);
@@ -283,8 +258,6 @@
             if (type === 'horizontal') {
                 const newPos = startPos + (e.clientY - startY);
                 element.style.top = newPos + 'px';
-                label.style.top = (newPos - 20) + 'px';
-                updateHorizontalLabel(label, newPos);
                 
                 // Update the line's position in the guidelines array
                 const guidelineObj = guidelines.horizontal.find(g => g.line === element);
@@ -297,8 +270,6 @@
             } else {
                 const newPos = startPos + (e.clientX - startX);
                 element.style.left = newPos + 'px';
-                label.style.left = (newPos + 5) + 'px';
-                updateVerticalLabel(label, newPos);
                 
                 // Update the line's position in the guidelines array
                 const guidelineObj = guidelines.vertical.find(g => g.line === element);
@@ -321,11 +292,9 @@
     function clearAllLines() {
         guidelines.horizontal.forEach(item => {
             document.body.removeChild(item.line);
-            document.body.removeChild(item.label);
         });
         guidelines.vertical.forEach(item => {
             document.body.removeChild(item.line);
-            document.body.removeChild(item.label);
         });
         guidelines.horizontal = [];
         guidelines.vertical = [];
