@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Responsive Viewport Overlay
 // @namespace    http://tampermonkey.net/
-// @version      1.8.2
+// @version      1.8.3
 // @description  Adds a movable and customizable overlay to any webpage, showing the current viewport dimensions. It’s designed to help web developers and designers quickly simulate screen sizes and test responsive layouts in real time.
 // @author       Rob Wood
 // @license      MIT
