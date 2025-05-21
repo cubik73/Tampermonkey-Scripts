@@ -199,6 +199,13 @@
   header.style.justifyContent = 'space-between';
   header.style.alignItems = 'center';
 
+  // Create a container for dimensions text and info icon
+  const dimensionsContainer = document.createElement('div');
+  dimensionsContainer.style.display = 'flex';
+  dimensionsContainer.style.alignItems = 'center';
+  dimensionsContainer.style.gap = '6px';
+  dimensionsContainer.style.cursor = 'move'; // Ensure container is draggable
+
   const dimensionText = document.createElement('div');
   dimensionText.classList.add('dimensions');
 
@@ -207,13 +214,17 @@
   infoIcon.title = `Viewport Overlay v${SCRIPT_VERSION}\nToggle: ${TOGGLE_KEY}`;
   infoIcon.style.cursor = 'help';
 
+  // Add both elements to the container
+  dimensionsContainer.appendChild(dimensionText);
+  dimensionsContainer.appendChild(infoIcon);
+
   const collapseToggle = document.createElement('button');
   collapseToggle.textContent = '—';
   collapseToggle.title = 'Collapse/Expand overlay';
   collapseToggle.classList.add('collapse-btn');
 
-  header.appendChild(dimensionText);
-  header.appendChild(infoIcon);
+  // Add the container and collapse button to header
+  header.appendChild(dimensionsContainer);
   header.appendChild(collapseToggle);
   overlay.appendChild(header);
 
