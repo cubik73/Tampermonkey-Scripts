@@ -186,6 +186,52 @@
       cursor: not-allowed;
       opacity: 0.6;
     }
+    
+    /* Settings Section Styles */
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+      margin-top: 6px;
+      border-top: 1px solid rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+    }
+    .settings-toggle {
+      font-size: 12px;
+      font-weight: bold;
+      user-select: none;
+    }
+    .settings-container {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .settings-container.expanded {
+      display: flex;
+    }
+    .device-preset {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .device-preset input {
+      width: 60px;
+      text-align: center;
+    }
+    .device-preset span {
+      font-size: 12px;
+    }
+    .settings-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+    .settings-actions button {
+      flex: 0 1 auto;
+    }
   `;
   style.appendChild(document.createTextNode(styleContent));
   shadow.appendChild(style);
@@ -330,6 +376,154 @@
   customWrapper.appendChild(applyBtn);
   overlay.appendChild(customWrapper);
 
+  // Add Settings section
+  const settingsKey = `viewportOverlaySettings_${domainKey}`;
+  
+  const settingsHeader = document.createElement('div');
+  settingsHeader.className = 'settings-header';
+  
+  const settingsTitle = document.createElement('div');
+  settingsTitle.className = 'settings-toggle';
+  settingsTitle.textContent = '⚙️ Settings';
+  
+  const settingsToggle = document.createElement('span');
+  settingsToggle.textContent = '▼';
+  settingsToggle.style.fontSize = '10px';
+  
+  settingsHeader.appendChild(settingsTitle);
+  settingsHeader.appendChild(settingsToggle);
+  overlay.appendChild(settingsHeader);
+  
+  const settingsContainer = document.createElement('div');
+  settingsContainer.className = 'settings-container';
+  overlay.appendChild(settingsContainer);
+  
+  // Toggle settings visibility
+  settingsHeader.addEventListener('click', () => {
+    const expanded = settingsContainer.classList.toggle('expanded');
+    settingsToggle.textContent = expanded ? '▲' : '▼';
+    
+    // Create settings UI if expanded for the first time
+    if (expanded && !settingsContainer.hasChildNodes()) {
+      createSettingsUI();
+    }
+  });
+  
+  function createSettingsUI() {
+    const deviceConfigs = document.createElement('div');
+    deviceConfigs.style.display = 'flex';
+    deviceConfigs.style.flexDirection = 'column';
+    deviceConfigs.style.gap = '6px';
+    
+    // Load saved device presets or use defaults
+    const savedDevices = JSON.parse(localStorage.getItem(settingsKey) || 'null') || devices;
+    
+    // Create inputs for each device preset
+    savedDevices.forEach((device, index) => {
+      const deviceRow = document.createElement('div');
+      deviceRow.className = 'device-preset';
+      
+      const widthInput = document.createElement('input');
+      widthInput.type = 'number';
+      widthInput.min = '100';
+      widthInput.value = device.w;
+      widthInput.placeholder = 'Width';
+      
+      const separator = document.createElement('span');
+      separator.textContent = '×';
+      
+      const heightInput = document.createElement('input');
+      heightInput.type = 'number';
+      heightInput.min = '100';
+      heightInput.value = device.h;
+      heightInput.placeholder = 'Height';
+      
+      deviceRow.appendChild(widthInput);
+      deviceRow.appendChild(separator);
+      deviceRow.appendChild(heightInput);
+      
+      deviceConfigs.appendChild(deviceRow);
+    });
+    
+    // Add actions
+    const actionsRow = document.createElement('div');
+    actionsRow.className = 'settings-actions';
+    
+    const saveButton = document.createElement('button');
+    saveButton.textContent = 'Save Presets';
+    saveButton.title = 'Save viewport presets';
+    saveButton.addEventListener('click', saveDevicePresets);
+    
+    const resetButton = document.createElement('button');
+    resetButton.textContent = 'Reset Defaults';
+    resetButton.title = 'Reset to default viewport sizes';
+    resetButton.addEventListener('click', resetDevicePresets);
+    
+    actionsRow.appendChild(resetButton);
+    actionsRow.appendChild(saveButton);
+    
+    settingsContainer.appendChild(deviceConfigs);
+    settingsContainer.appendChild(actionsRow);
+  }
+  
+  function saveDevicePresets() {
+    const presetRows = settingsContainer.querySelectorAll('.device-preset');
+    const newDevices = Array.from(presetRows).map(row => {
+      const inputs = row.querySelectorAll('input');
+      return {
+        w: parseInt(inputs[0].value, 10) || 320,
+        h: parseInt(inputs[1].value, 10) || 568
+      };
+    });
+    
+    // Save to localStorage
+    localStorage.setItem(settingsKey, JSON.stringify(newDevices));
+    
+    // Update device buttons
+    updateDeviceButtons(newDevices);
+    
+    // Show confirmation
+    const saveButton = settingsContainer.querySelector('.settings-actions button:last-child');
+    const originalText = saveButton.textContent;
+    saveButton.textContent = 'Saved!';
+    setTimeout(() => {
+      saveButton.textContent = originalText;
+    }, 1500);
+  }
+  
+  function resetDevicePresets() {
+    if (confirm('Reset all viewport presets to default values?')) {
+      localStorage.removeItem(settingsKey);
+      settingsContainer.innerHTML = '';
+      createSettingsUI();
+      updateDeviceButtons(devices);
+    }
+  }
+  
+  function updateDeviceButtons(newDevices) {
+    // Clear existing device buttons
+    controls.querySelectorAll('button').forEach(button => {
+      if (button.textContent.includes('×')) {
+        button.remove();
+      }
+    });
+    
+    // Create new device buttons at the start
+    newDevices.reverse().forEach(d => {
+      const newBtn = btn(`${d.w}×${d.h}`, `Open new window at ${d.w}x${d.h}`, () => {
+        window.open(location.href, '_blank', `width=${d.w},height=${d.h},resizable=yes`);
+      });
+      controls.insertBefore(newBtn, controls.firstChild);
+    });
+  }
+
+  // Initialize with saved devices if available
+  const savedDevices = JSON.parse(localStorage.getItem(settingsKey) || 'null');
+  if (savedDevices) {
+    updateDeviceButtons(savedDevices);
+  }
+  
+  // Existing collapse toggle event handler
   collapseToggle.addEventListener('click', () => {
     const collapsed = overlay.classList.toggle('collapsed');
     controls.style.display = collapsed ? 'none' : 'flex';
