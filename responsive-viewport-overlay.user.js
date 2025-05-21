@@ -85,6 +85,11 @@
       box-shadow: 0 2px 10px rgba(0,0,0,0.6);
       z-index: 999999999;
     }
+    #overlay.collapsed .settings-header {
+      margin-top: 0;
+      border-top: none;
+      padding-top: 0;
+    }
     .dimensions {
       cursor: move;
     }
@@ -667,6 +672,8 @@
     const collapsed = overlay.classList.toggle('collapsed');
     controls.style.display = collapsed ? 'none' : 'flex';
     customWrapper.style.display = collapsed ? 'none' : 'flex';
+    // Don't hide the settings section
+    settingsHeader.style.display = 'flex';  // Keep settings header visible
     collapseToggle.textContent = collapsed ? '+' : '—';
     localStorage.setItem(collapsedKey, collapsed);
   });
@@ -803,6 +810,8 @@
     overlay.classList.add('collapsed');
     controls.style.display = 'none';
     customWrapper.style.display = 'none';
+    // Don't hide the settings section
+    settingsHeader.style.display = 'flex';  // Keep settings header visible
     collapseToggle.textContent = '+';
   }
 
