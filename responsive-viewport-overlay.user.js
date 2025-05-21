@@ -116,6 +116,65 @@
       border: 1px solid #ccc;
       flex: 1;
     }
+    
+    /* Toggle Switch Styles */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 0 auto;
+      padding: 2px 6px;
+      font-size: 12px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background: #333;
+    }
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      margin: 0;
+      padding: 0;
+    }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #f44336; /* Red for OFF */
+      transition: .3s;
+      border-radius: 20px;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .toggle-slider {
+      background-color: #4CAF50; /* Green for ON */
+    }
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+    .toggle-switch.disabled .toggle-slider {
+      background-color: #888; /* Gray when disabled */
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
   `;
   style.appendChild(document.createTextNode(styleContent));
   shadow.appendChild(style);
@@ -184,13 +243,37 @@
     savePosition();
   }));
 
-  const touchToggle = btn('Touch: Off', 'Toggle touch mode (hides scrollbar)', () => {
-    const enabled = !(localStorage.getItem(touchModeKey) === 'true');
+  // Replace the touch toggle button with a modern UI switch
+  const touchToggleContainer = document.createElement('div');
+  touchToggleContainer.className = 'toggle-container';
+  touchToggleContainer.title = 'Toggle touch mode (hides scrollbar)';
+  
+  const touchLabel = document.createElement('span');
+  touchLabel.textContent = 'Touch:';
+  
+  const touchSwitch = document.createElement('label');
+  touchSwitch.className = 'toggle-switch';
+  
+  const touchInput = document.createElement('input');
+  touchInput.type = 'checkbox';
+  
+  const touchSlider = document.createElement('span');
+  touchSlider.className = 'toggle-slider';
+  
+  touchSwitch.appendChild(touchInput);
+  touchSwitch.appendChild(touchSlider);
+  
+  touchToggleContainer.appendChild(touchLabel);
+  touchToggleContainer.appendChild(touchSwitch);
+  
+  controls.appendChild(touchToggleContainer);
+
+  // Touch toggle event handler
+  touchInput.addEventListener('change', () => {
+    const enabled = touchInput.checked;
     localStorage.setItem(touchModeKey, enabled);
-    touchToggle.textContent = `Touch: ${enabled ? 'On' : 'Off'}`;
     applyTouchMode(enabled);
   });
-  controls.appendChild(touchToggle);
 
   overlay.appendChild(controls);
 
@@ -256,7 +339,7 @@
   }
 
   const savedTouch = localStorage.getItem(touchModeKey) === 'true';
-  touchToggle.textContent = `Touch: ${savedTouch ? 'On' : 'Off'}`;
+  touchInput.checked = savedTouch;
   applyTouchMode(savedTouch);
 
   function constrainToViewport() {
