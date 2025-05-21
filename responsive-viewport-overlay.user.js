@@ -53,23 +53,12 @@
   document.body.appendChild(overlayHost);
 
   const shadow = overlayHost.attachShadow({ mode: 'open' });
-
-  const fontLink1 = document.createElement('link');
-  fontLink1.rel = 'stylesheet';
-  fontLink1.href = 'https://fonts.googleapis.com/css2?family=Funnel+Sans&display=swap';
-  shadow.appendChild(fontLink1);
-  
-  const fontLink2 = document.createElement('link');
-  fontLink2.rel = 'stylesheet';
-  fontLink2.href = 'https://fonts.googleapis.com/css2?family=Funnel+Sans:ital,wght@0,300..800;1,300..800&family=Prosto+One&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap';
-  shadow.appendChild(fontLink2);
-
   const style = document.createElement('style');
   const styleContent = `
     * {
       all: initial;
       box-sizing: border-box;
-      font-family: 'Funnel Sans', sans-serif !important;
+      font-family: Consolas, Monaco, "Courier New", monospace !important;
       color: #fff !important;
     }
     style, script, link, meta, title {
