@@ -109,6 +109,17 @@
       color: #fff;
       flex: 1 0 auto;
     }
+    .collapse-btn {
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+      font-size: 14px;
+      font-weight: bold;
+    }
     input {
       padding: 2px;
       font-size: 12px;
@@ -199,6 +210,7 @@
   const collapseToggle = document.createElement('button');
   collapseToggle.textContent = '—';
   collapseToggle.title = 'Collapse/Expand overlay';
+  collapseToggle.classList.add('collapse-btn');
 
   header.appendChild(dimensionText);
   header.appendChild(infoIcon);
