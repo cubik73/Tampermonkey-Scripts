@@ -5,7 +5,7 @@
 // @description  Adds a movable and customizable overlay to any webpage, showing the current viewport dimensions. It’s designed to help web developers and designers quickly simulate screen sizes and test responsive layouts in real time.
 // @author       Rob Wood
 // @license      MIT
-// @icon         https://example.com/icon.png
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=robertwood.me
 // @homepage     https://github.com/cubik73/Tampermonkey-Scripts/
 // @supportURL   https://github.com/cubik73/Tampermonkey-Scripts/issues
 // @updateURL    https://github.com/cubik73/Tampermonkey-Scripts/blob/main/responsive-viewport-overlay.user.js
