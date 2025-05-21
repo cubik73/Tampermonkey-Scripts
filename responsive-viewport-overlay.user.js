@@ -459,13 +459,163 @@
     resetButton.title = 'Reset to default viewport sizes';
     resetButton.addEventListener('click', resetDevicePresets);
     
+    // Add import/export buttons row
+    const importExportRow = document.createElement('div');
+    importExportRow.className = 'settings-actions';
+    importExportRow.style.justifyContent = 'space-between';
+    importExportRow.style.marginTop = '12px';
+    importExportRow.style.borderTop = '1px solid rgba(255, 255, 255, 0.2)';
+    importExportRow.style.paddingTop = '8px';
+    
+    const exportButton = document.createElement('button');
+    exportButton.textContent = '📤 Export';
+    exportButton.title = 'Export settings to a file';
+    exportButton.addEventListener('click', exportSettings);
+    
+    const importButton = document.createElement('button');
+    importButton.textContent = '📥 Import';
+    importButton.title = 'Import settings from a file';
+    importButton.addEventListener('click', importSettings);
+    
+    // Hidden file input for import
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.json,.vpsettings';
+    fileInput.style.display = 'none';
+    fileInput.addEventListener('change', handleFileImport);
+    shadow.appendChild(fileInput);
+    
+    importExportRow.appendChild(importButton);
+    importExportRow.appendChild(exportButton);
+    
     actionsRow.appendChild(resetButton);
     actionsRow.appendChild(saveButton);
     
     settingsContainer.appendChild(deviceConfigs);
     settingsContainer.appendChild(actionsRow);
+    settingsContainer.appendChild(importExportRow);
   }
   
+  function exportSettings() {
+    try {
+      // Get device settings
+      const presetRows = settingsContainer.querySelectorAll('.device-preset');
+      const deviceSettings = Array.from(presetRows).map(row => {
+        const inputs = row.querySelectorAll('input');
+        return {
+          w: parseInt(inputs[0].value, 10) || 320,
+          h: parseInt(inputs[1].value, 10) || 568
+        };
+      });
+      
+      // Create settings payload with version and metadata for future compatibility
+      const exportData = {
+        version: SCRIPT_VERSION,
+        exportDate: new Date().toISOString(),
+        type: 'viewport-overlay-settings',
+        settings: {
+          devices: deviceSettings,
+          // Can add more settings categories here in future versions
+        }
+      };
+      
+      // Convert to JSON
+      const jsonData = JSON.stringify(exportData, null, 2);
+      
+      // Create downloadable file
+      const blob = new Blob([jsonData], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      // Create download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = `viewport-settings-${domainKey}-${new Date().toISOString().slice(0,10)}.vpsettings`;
+      
+      // Trigger download
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      // Clean up
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+      
+      // Show success feedback
+      const exportBtn = settingsContainer.querySelector('button[title="Export settings to a file"]');
+      const originalText = exportBtn.textContent;
+      exportBtn.textContent = '✓ Exported!';
+      setTimeout(() => {
+        exportBtn.textContent = originalText;
+      }, 1500);
+      
+    } catch(e) {
+      alert(`Export failed: ${e.message}`);
+      console.error('Settings export failed:', e);
+    }
+  }
+  
+  function importSettings() {
+    // Trigger file input click
+    const fileInput = shadow.querySelector('input[type="file"]');
+    fileInput.click();
+  }
+  
+  function handleFileImport(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(event) {
+      try {
+        // Parse the imported file
+        const importedData = JSON.parse(event.target.result);
+        
+        // Validate the data structure
+        if (!importedData.type || importedData.type !== 'viewport-overlay-settings') {
+          throw new Error('Invalid settings file format');
+        }
+        
+        // Handle device settings
+        if (importedData.settings && importedData.settings.devices && 
+            Array.isArray(importedData.settings.devices)) {
+            
+          // Update the localStorage
+          localStorage.setItem(settingsKey, JSON.stringify(importedData.settings.devices));
+          
+          // Rebuild the settings UI
+          settingsContainer.innerHTML = '';
+          createSettingsUI();
+          
+          // Update the device buttons
+          updateDeviceButtons(importedData.settings.devices);
+          
+          // Show success feedback
+          const importBtn = settingsContainer.querySelector('button[title="Import settings from a file"]');
+          const originalText = importBtn.textContent;
+          importBtn.textContent = '✓ Imported!';
+          setTimeout(() => {
+            importBtn.textContent = originalText;
+          }, 1500);
+        } else {
+          throw new Error('No valid device settings found');
+        }
+        
+      } catch(e) {
+        alert(`Import failed: ${e.message}`);
+        console.error('Settings import failed:', e);
+      }
+      
+      // Reset the file input
+      e.target.value = '';
+    };
+    
+    reader.onerror = function() {
+      alert('Error reading file');
+      console.error('File read error');
+    };
+    
+    reader.readAsText(file);
+  }
+
   function saveDevicePresets() {
     const presetRows = settingsContainer.querySelectorAll('.device-preset');
     const newDevices = Array.from(presetRows).map(row => {
@@ -491,15 +641,6 @@
     }, 1500);
   }
   
-  function resetDevicePresets() {
-    if (confirm('Reset all viewport presets to default values?')) {
-      localStorage.removeItem(settingsKey);
-      settingsContainer.innerHTML = '';
-      createSettingsUI();
-      updateDeviceButtons(devices);
-    }
-  }
-  
   function updateDeviceButtons(newDevices) {
     // Clear existing device buttons
     controls.querySelectorAll('button').forEach(button => {
@@ -509,12 +650,21 @@
     });
     
     // Create new device buttons at the start
-    newDevices.reverse().forEach(d => {
+    newDevices.slice().reverse().forEach(d => {
       const newBtn = btn(`${d.w}×${d.h}`, `Open new window at ${d.w}x${d.h}`, () => {
         window.open(location.href, '_blank', `width=${d.w},height=${d.h},resizable=yes`);
       });
       controls.insertBefore(newBtn, controls.firstChild);
     });
+  }
+  
+  function resetDevicePresets() {
+    if (confirm('Reset all viewport presets to default values?')) {
+      localStorage.removeItem(settingsKey);
+      settingsContainer.innerHTML = '';
+      createSettingsUI();
+      updateDeviceButtons(devices);
+    }
   }
 
   // Initialize with saved devices if available
