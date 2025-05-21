@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Responsive Viewport Overlay
 // @namespace    http://tampermonkey.net/
-// @version      1.8.3
+// @version      1.8.4
 // @description  Adds a movable and customizable overlay to any webpage, showing the current viewport dimensions. It’s designed to help web developers and designers quickly simulate screen sizes and test responsive layouts in real time.
 // @author       Rob Wood
 // @license      MIT
@@ -42,6 +42,7 @@
   const storageKey = `viewportOverlayPos_${domainKey}`;
   const visibilityKey = `viewportOverlayVisible_${domainKey}`;
   const collapsedKey = `viewportOverlayCollapsed_${domainKey}`;
+  const touchModeKey = `viewportOverlayTouchMode_${domainKey}`;
 
   // === Shadow DOM Setup ===
   const overlayHost = document.createElement('div');
@@ -53,11 +54,10 @@
 
   const shadow = overlayHost.attachShadow({ mode: 'open' });
 
-    // Add Google Fonts <link> to the Shadow DOM
-    const fontLink = document.createElement('link');
-    fontLink.rel = 'stylesheet';
-    fontLink.href = 'https://fonts.googleapis.com/css2?family=Funnel+Sans&display=swap';
-    shadow.appendChild(fontLink);
+  const fontLink = document.createElement('link');
+  fontLink.rel = 'stylesheet';
+  fontLink.href = 'https://fonts.googleapis.com/css2?family=Funnel+Sans&display=swap';
+  shadow.appendChild(fontLink);
 
   const style = document.createElement('style');
   style.textContent = `
@@ -116,7 +116,6 @@
   overlay.id = 'overlay';
   shadow.appendChild(overlay);
 
-  // === UI Elements ===
   const header = document.createElement('div');
   header.style.display = 'flex';
   header.style.justifyContent = 'space-between';
@@ -177,9 +176,16 @@
     savePosition();
   }));
 
+  const touchToggle = btn('Touch: Off', 'Toggle touch mode (hides scrollbar)', () => {
+    const enabled = !(localStorage.getItem(touchModeKey) === 'true');
+    localStorage.setItem(touchModeKey, enabled);
+    touchToggle.textContent = `Touch: ${enabled ? 'On' : 'Off'}`;
+    applyTouchMode(enabled);
+  });
+  controls.appendChild(touchToggle);
+
   overlay.appendChild(controls);
 
-  // === Editable custom width/height ===
   const customWrapper = document.createElement('div');
   customWrapper.style.display = 'flex';
   customWrapper.style.gap = '4px';
@@ -217,6 +223,33 @@
     collapseToggle.textContent = collapsed ? '+' : '—';
     localStorage.setItem(collapsedKey, collapsed);
   });
+
+  function applyTouchMode(enabled) {
+    document.documentElement.style.scrollbarWidth = enabled ? 'none' : '';
+    document.documentElement.style.msOverflowStyle = enabled ? 'none' : '';
+    const customStyleId = 'tm-touch-scroll-style';
+    let styleEl = document.getElementById(customStyleId);
+    if (enabled) {
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = customStyleId;
+        styleEl.textContent = `
+          ::-webkit-scrollbar { width: 0px; height: 0px; }
+          html, body {
+            scrollbar-width: none !important;
+            -ms-overflow-style: none !important;
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+    } else {
+      if (styleEl) styleEl.remove();
+    }
+  }
+
+  const savedTouch = localStorage.getItem(touchModeKey) === 'true';
+  touchToggle.textContent = `Touch: ${savedTouch ? 'On' : 'Off'}`;
+  applyTouchMode(savedTouch);
 
   function constrainToViewport() {
     const rect = overlay.getBoundingClientRect();
