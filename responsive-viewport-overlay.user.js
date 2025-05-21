@@ -8,8 +8,8 @@
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=robertwood.me
 // @homepage     https://github.com/cubik73/Tampermonkey-Scripts/
 // @supportURL   https://github.com/cubik73/Tampermonkey-Scripts/issues
-// @updateURL    https://github.com/cubik73/Tampermonkey-Scripts/blob/main/responsive-viewport-overlay.user.js
-// @downloadURL  https://github.com/cubik73/Tampermonkey-Scripts/blob/main/responsive-viewport-overlay.user.js
+// @updateURL    https://raw.githubusercontent.com/cubik73/Tampermonkey-Scripts/main/responsive-viewport-overlay.user.js
+// @downloadURL  https://raw.githubusercontent.com/cubik73/Tampermonkey-Scripts/main/responsive-viewport-overlay.user.js
 // @match        *://*/*
 // @grant        none
 // @run-at       document-end
