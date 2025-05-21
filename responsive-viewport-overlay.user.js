@@ -6,8 +6,10 @@
 // @author       Rob Wood
 // @license      MIT
 // @icon         https://example.com/icon.png
-// @homepage     https://github.com/cubik73/Tampermonkey-Scripts/responsive-viewport-overlay
-// @supportURL   https://github.com/cubik73/Tampermonkey-Scripts/responsive-viewport-overlay/issues
+// @homepage     https://github.com/cubik73/Tampermonkey-Scripts/
+// @supportURL   https://github.com/cubik73/Tampermonkey-Scripts/issues
+// @updateURL    https://github.com/cubik73/Tampermonkey-Scripts/blob/main/responsive-viewport-overlay.user.js
+// @downloadURL  https://github.com/cubik73/Tampermonkey-Scripts/blob/main/responsive-viewport-overlay.user.js
 // @match        *://*/*
 // @grant        none
 // @run-at       document-end
