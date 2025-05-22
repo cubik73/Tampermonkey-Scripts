@@ -134,7 +134,7 @@
         }
         
         .gl-between-horizontal {
-            left: 4px;
+            left: 10px; /* Increased from 4px to 10px to move away from edge */
             transform: translateY(-50%) rotate(-90deg);
             transform-origin: left center;
         }
@@ -272,6 +272,13 @@
                 
                 createHorizontalMeasurement(pos1, pos2, distance);
             }
+            
+            // Add measurement from last line to bottom of viewport
+            const lastPos = parseInt(sorted[sorted.length - 1].line.style.top);
+            const distanceToBottom = window.innerHeight - lastPos;
+            if (distanceToBottom > 0) {
+                createHorizontalMeasurement(lastPos, window.innerHeight, distanceToBottom);
+            }
         }
     }
 
@@ -300,6 +307,13 @@
                 const distance = pos2 - pos1;
                 
                 createVerticalMeasurement(pos1, pos2, distance);
+            }
+            
+            // Add measurement from last line to right edge of viewport
+            const lastPos = parseInt(sorted[sorted.length - 1].line.style.left);
+            const distanceToRight = window.innerWidth - lastPos;
+            if (distanceToRight > 0) {
+                createVerticalMeasurement(lastPos, window.innerWidth, distanceToRight);
             }
         }
     }
