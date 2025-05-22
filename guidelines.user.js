@@ -115,7 +115,6 @@
         }
         
         .gl-between-distance {
-            position: absolute; /* Changed from fixed to absolute */
             color: #00ff00;
             font-size: 12px;
             font-family: Arial, sans-serif;
@@ -128,15 +127,19 @@
             text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
         }
         
-        .gl-between-vertical {
-            top: 4px;
-            transform: translateX(-50%);
-        }
-        
+        /* Horizontal measurements (left side) remain absolute positioned */
         .gl-between-horizontal {
+            position: absolute;
             left: 10px;
             transform: translateY(-50%) rotate(-90deg);
             transform-origin: left center;
+        }
+        
+        /* Vertical measurements (top) are now fixed positioned */
+        .gl-between-vertical {
+            position: fixed; 
+            top: 4px;
+            transform: translateX(-50%);
         }
         
         /* Preview line styles for drag operation */
@@ -361,7 +364,9 @@
     function createVerticalMeasurement(x1, x2, distance) {
         const measurement = document.createElement('div');
         measurement.className = 'gl-between-distance gl-between-vertical';
-        measurement.style.left = (x1 + (x2 - x1) / 2) + 'px';
+        
+        // For fixed position elements, subtract scrollX to keep aligned with lines
+        measurement.style.left = ((x1 + (x2 - x1) / 2) - window.scrollX) + 'px';
         measurement.textContent = distance + 'px';
         document.body.appendChild(measurement);
         measurements.vertical.push(measurement);
@@ -719,4 +724,41 @@
             }
         });
     }
+
+    // Update vertical measurement positions during scroll
+    window.addEventListener('scroll', function() {
+        // Only update fixed position vertical measurements when scrolling horizontally
+        if (measurements.vertical.length > 0) {
+            // Get current sorted vertical guidelines
+            const sorted = [...guidelines.vertical].sort((a, b) => {
+                return parseInt(a.line.style.left) - parseInt(b.line.style.left);
+            });
+            
+            if (sorted.length > 0) {
+                // Update existing measurements
+                measurements.vertical.forEach((measurement, index) => {
+                    let x1, x2;
+                    
+                    // First measurement (left edge to first line)
+                    if (index === 0 && parseInt(sorted[0].line.style.left) > 0) {
+                        x1 = 0;
+                        x2 = parseInt(sorted[0].line.style.left);
+                    } 
+                    // Between lines measurements
+                    else if (index < sorted.length) {
+                        x1 = parseInt(sorted[index-1].line.style.left);
+                        x2 = parseInt(sorted[index].line.style.left);
+                    }
+                    // Last measurement (last line to right edge)
+                    else {
+                        x1 = parseInt(sorted[sorted.length-1].line.style.left);
+                        x2 = window.innerWidth + window.scrollX;
+                    }
+                    
+                    // Update position by compensating for horizontal scroll
+                    measurement.style.left = ((x1 + (x2 - x1) / 2) - window.scrollX) + 'px';
+                });
+            }
+        }
+    });
 })();
