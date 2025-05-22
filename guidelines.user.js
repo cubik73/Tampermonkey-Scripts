@@ -15,7 +15,6 @@
 // @run-at       document-end
 // ==/UserScript==
 
-
 (function() {
     'use strict';
 
@@ -74,32 +73,85 @@
             z-index: 9999;
             pointer-events: auto;
         }
+        
+        /* Measurement bars along edges */
+        .gl-measurement-bar-top {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 24px;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            pointer-events: auto; /* Enable pointer events for dragging from bar */
+            cursor: row-resize;
+        }
+        
+        .gl-measurement-bar-left {
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 24px;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9998;
+            pointer-events: auto; /* Enable pointer events for dragging from bar */
+            cursor: col-resize;
+        }
+        
         .gl-between-distance {
             position: fixed;
-            background: rgba(255,255,255,0.8);
-            padding: 2px 5px;
-            font-size: 11px;
+            color: #00ff00;
+            font-size: 12px;
             font-family: Arial, sans-serif;
-            color: #007700;
             z-index: 10001;
             pointer-events: none;
-            border: 1px solid rgba(0,120,0,0.3);
             display: flex;
             justify-content: center;
             align-items: center;
+            background-color: transparent;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.8);
         }
+        
         .gl-between-vertical {
-            height: 20px;
+            top: 4px;
             transform: translateX(-50%);
-            top: 30px;
         }
+        
         .gl-between-horizontal {
-            width: 20px;
-            transform: translateY(-50%);
-            left: 30px;
+            left: 4px;
+            transform: translateY(-50%) rotate(-90deg);
+            transform-origin: left center;
+        }
+        
+        /* Preview line styles for drag operation */
+        .gl-preview-line {
+            position: absolute;
+            background-color: rgba(0, 255, 0, 0.5);
+            z-index: 9997;
+            pointer-events: none;
+        }
+        
+        .gl-preview-horizontal {
+            width: 100%;
+            height: 2px;
+        }
+        
+        .gl-preview-vertical {
+            height: 100%;
+            width: 2px;
         }
     `;
     document.head.appendChild(globalStyles);
+
+    // Create the measurement bars
+    const topBar = document.createElement('div');
+    topBar.className = 'gl-measurement-bar-top';
+    document.body.appendChild(topBar);
+    
+    const leftBar = document.createElement('div');
+    leftBar.className = 'gl-measurement-bar-left';
+    document.body.appendChild(leftBar);
 
     // Create control panel
     const controlPanel = document.createElement('div');
@@ -126,6 +178,11 @@
         horizontal: [],
         vertical: []
     };
+
+    // Variables for drag operations from bars
+    let isDragging = false;
+    let dragType = null;
+    let previewLine = null;
 
     // Add horizontal line
     function addHorizontalLine(yPosition = 100) {
@@ -306,7 +363,76 @@
         measurements.vertical = [];
     }
 
-    // Add event listeners
+    // Setup drag functionality from measurement bars
+    function setupBarDragHandlers() {
+        // Top bar - for horizontal lines
+        topBar.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDragging = true;
+            dragType = 'horizontal';
+            
+            // Create a preview line
+            previewLine = document.createElement('div');
+            previewLine.className = 'gl-preview-line gl-preview-horizontal';
+            previewLine.style.top = e.clientY + 'px';
+            document.body.appendChild(previewLine);
+            
+            document.addEventListener('mousemove', handleBarDragMove);
+            document.addEventListener('mouseup', handleBarDragEnd);
+        });
+        
+        // Left bar - for vertical lines
+        leftBar.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            isDragging = true;
+            dragType = 'vertical';
+            
+            // Create a preview line
+            previewLine = document.createElement('div');
+            previewLine.className = 'gl-preview-line gl-preview-vertical';
+            previewLine.style.left = e.clientX + 'px';
+            document.body.appendChild(previewLine);
+            
+            document.addEventListener('mousemove', handleBarDragMove);
+            document.addEventListener('mouseup', handleBarDragEnd);
+        });
+    }
+    
+    // Handle mouse move during dragging from bar
+    function handleBarDragMove(e) {
+        if (!isDragging || !previewLine) return;
+        
+        if (dragType === 'horizontal') {
+            previewLine.style.top = e.clientY + 'px';
+        } else {
+            previewLine.style.left = e.clientX + 'px';
+        }
+    }
+    
+    // Handle mouse up after dragging from bar
+    function handleBarDragEnd(e) {
+        if (!isDragging || !previewLine) return;
+        
+        if (dragType === 'horizontal') {
+            addHorizontalLine(e.clientY);
+        } else {
+            addVerticalLine(e.clientX);
+        }
+        
+        // Clean up
+        document.body.removeChild(previewLine);
+        previewLine = null;
+        isDragging = false;
+        dragType = null;
+        
+        document.removeEventListener('mousemove', handleBarDragMove);
+        document.removeEventListener('mouseup', handleBarDragEnd);
+    }
+
+    // Initialize drag from bar functionality
+    setupBarDragHandlers();
+
+    // Add event listeners for control panel
     const addHorizontalBtn = shadow.getElementById('add-horizontal');
     const addVerticalBtn = shadow.getElementById('add-vertical');
     const clearLinesBtn = shadow.getElementById('clear-lines');
