@@ -46,6 +46,30 @@
             margin: 2px;
             cursor: pointer;
         }
+        .guideline-controls.collapsed .controls-content {
+            display: none;
+        }
+        .guideline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            cursor: move;
+        }
+        .guideline-title {
+            font-weight: bold;
+        }
+        .collapse-btn {
+            width: 24px;
+            height: 24px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+            font-size: 14px;
+            font-weight: bold;
+        }
         .storage-controls {
             margin-top: 10px;
             padding-top: 5px;
@@ -65,11 +89,11 @@
     const globalStyles = document.createElement('style');
     globalStyles.textContent = `
         .gl-horizontal-line {
-            position: absolute; /* Changed from fixed to absolute */
+            position: absolute;
             left: 0;
             right: 0;
             height: 0;
-            border-top: 2px dashed green;
+            border-top: 1px solid green;
             cursor: ns-resize;
             z-index: 2147483644;
             pointer-events: auto;
@@ -77,11 +101,11 @@
             padding: 0;
         }
         .gl-vertical-line {
-            position: absolute; /* Changed from fixed to absolute */
+            position: absolute;
             top: 0;
             bottom: 0;
             width: 0;
-            border-left: 2px dashed green;
+            border-left: 1px solid green;
             cursor: ew-resize;
             z-index: 2147483644;
             pointer-events: auto;
@@ -89,7 +113,6 @@
             padding: 0;
         }
         
-        /* Measurement bars remain fixed */
         .gl-measurement-bar-top {
             position: fixed;
             top: 0;
@@ -163,8 +186,8 @@
         }
         
         .gl-horizontal-line:hover, .gl-vertical-line:hover {
-            border-color: red;
-            border-width: 3px;
+            border-color: #0f0;
+            border-width: 1px;
         }
     `;
     document.head.appendChild(globalStyles);
@@ -178,10 +201,31 @@
     leftBar.className = 'gl-measurement-bar-left';
     document.body.appendChild(leftBar);
 
-    // Create control panel
+    // Control panel HTML structure
     const controlPanel = document.createElement('div');
     controlPanel.className = 'guideline-controls';
-    controlPanel.innerHTML = `
+
+    // Create header with title and collapse button
+    const header = document.createElement('div');
+    header.className = 'guideline-header';
+
+    const title = document.createElement('div');
+    title.className = 'guideline-title';
+    title.textContent = 'Guidelines';
+
+    const collapseToggle = document.createElement('button');
+    collapseToggle.textContent = '—';
+    collapseToggle.title = 'Collapse/Expand controls';
+    collapseToggle.className = 'collapse-btn';
+
+    header.appendChild(title);
+    header.appendChild(collapseToggle);
+
+    // Create a container for all the content that will be hidden when collapsed
+    const controlsContent = document.createElement('div');
+    controlsContent.className = 'controls-content';
+
+    controlsContent.innerHTML = `
         <div>
             <button id="add-horizontal">Add Horizontal Line</button>
             <button id="add-vertical">Add Vertical Line</button>
@@ -200,6 +244,10 @@
             <button id="delete-guidelines">Delete Saved</button>
         </div>
     `;
+
+    // Assemble the control panel
+    controlPanel.appendChild(header);
+    controlPanel.appendChild(controlsContent);
     shadow.appendChild(controlPanel);
 
     // Track all guidelines
@@ -219,12 +267,20 @@
     let dragType = null;
     let previewLine = null;
 
+    // Control panel drag variables
+    let isPanelDragging = false;
+    let panelStartX, panelStartY, panelStartLeft, panelStartTop;
+
     // Storage keys
     const STORAGE_KEYS = {
         global: 'guidelines_global',
         site: `guidelines_site_${window.location.hostname}`,
         page: `guidelines_page_${window.location.hostname}${window.location.pathname}`
     };
+
+    // Storage key for collapsed state
+    const collapsedKey = `guidelines_collapsed_${window.location.hostname}`;
+    const positionKey = `guidelines_position_${window.location.hostname}`;
 
     // Add horizontal line - modified to include removal handler
     function addHorizontalLine(yPosition = 100) {
@@ -760,5 +816,83 @@
                 });
             }
         }
+    });
+
+    // Collapse toggle behavior
+    collapseToggle.addEventListener('click', () => {
+        const collapsed = controlPanel.classList.toggle('collapsed');
+        collapseToggle.textContent = collapsed ? '+' : '—';
+        localStorage.setItem(collapsedKey, collapsed);
+    });
+
+    // Make the control panel draggable
+    header.addEventListener('mousedown', (e) => {
+        // Only drag when clicking the header itself, not its children buttons
+        if (e.target === header || e.target === title) {
+            isPanelDragging = true;
+            panelStartX = e.clientX;
+            panelStartY = e.clientY;
+            panelStartLeft = controlPanel.offsetLeft;
+            panelStartTop = controlPanel.offsetTop;
+            e.preventDefault();
+        }
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (isPanelDragging) {
+            // Calculate new position
+            const newLeft = panelStartLeft + (e.clientX - panelStartX);
+            const newTop = panelStartTop + (e.clientY - panelStartY);
+            
+            // Constrain to viewport
+            const maxX = window.innerWidth - controlPanel.offsetWidth;
+            const maxY = window.innerHeight - controlPanel.offsetHeight;
+            
+            // Apply constrained position
+            controlPanel.style.left = Math.max(0, Math.min(maxX, newLeft)) + 'px';
+            controlPanel.style.top = Math.max(0, Math.min(maxY, newTop)) + 'px';
+            controlPanel.style.right = 'auto'; // Clear any right positioning
+        }
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isPanelDragging) {
+            isPanelDragging = false;
+            // Save position
+            savePosition();
+        }
+    });
+
+    // Save position to localStorage
+    function savePosition() {
+        localStorage.setItem(positionKey, JSON.stringify({
+            left: controlPanel.style.left,
+            top: controlPanel.style.top
+        }));
+    }
+
+    // Restore position from localStorage
+    function restorePosition() {
+        const saved = JSON.parse(localStorage.getItem(positionKey));
+        if (saved) {
+            controlPanel.style.left = saved.left;
+            controlPanel.style.top = saved.top;
+            controlPanel.style.right = 'auto';
+        }
+    }
+
+    // Restore collapsed state from localStorage
+    function restoreCollapsedState() {
+        const collapsed = localStorage.getItem(collapsedKey) === 'true';
+        if (collapsed) {
+            controlPanel.classList.add('collapsed');
+            collapseToggle.textContent = '+';
+        }
+    }
+
+    // Call restore functions when initializing
+    window.addEventListener('DOMContentLoaded', () => {
+        restorePosition();
+        restoreCollapsedState();
     });
 })();
