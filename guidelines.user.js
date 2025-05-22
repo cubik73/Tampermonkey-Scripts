@@ -65,31 +65,31 @@
     const globalStyles = document.createElement('style');
     globalStyles.textContent = `
         .gl-horizontal-line {
-            position: fixed; /* Changed from absolute to fixed for better overlay */
+            position: absolute; /* Changed from fixed to absolute */
             left: 0;
             right: 0;
             height: 0;
             border-top: 2px dashed green;
             cursor: ns-resize;
-            z-index: 2147483644; /* Extremely high z-index to overlay almost everything */
+            z-index: 2147483644;
             pointer-events: auto;
             margin: 0;
             padding: 0;
         }
         .gl-vertical-line {
-            position: fixed; /* Changed from absolute to fixed for better overlay */
+            position: absolute; /* Changed from fixed to absolute */
             top: 0;
             bottom: 0;
             width: 0;
             border-left: 2px dashed green;
             cursor: ew-resize;
-            z-index: 2147483644; /* Extremely high z-index to overlay almost everything */
+            z-index: 2147483644;
             pointer-events: auto;
             margin: 0;
             padding: 0;
         }
         
-        /* Measurement bars along edges */
+        /* Measurement bars remain fixed */
         .gl-measurement-bar-top {
             position: fixed;
             top: 0;
@@ -98,7 +98,7 @@
             height: 24px;
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 2147483643;
-            pointer-events: auto; /* Enable pointer events for dragging from bar */
+            pointer-events: auto;
             cursor: row-resize;
         }
         
@@ -110,16 +110,16 @@
             width: 24px;
             background-color: rgba(0, 0, 0, 0.5);
             z-index: 2147483643;
-            pointer-events: auto; /* Enable pointer events for dragging from bar */
+            pointer-events: auto;
             cursor: col-resize;
         }
         
         .gl-between-distance {
-            position: fixed;
+            position: absolute; /* Changed from fixed to absolute */
             color: #00ff00;
             font-size: 12px;
             font-family: Arial, sans-serif;
-            z-index: 2147483646; /* Highest z-index for measurements */
+            z-index: 2147483646;
             pointer-events: none;
             display: flex;
             justify-content: center;
@@ -134,14 +134,14 @@
         }
         
         .gl-between-horizontal {
-            left: 10px; /* Increased from 4px to 10px to move away from edge */
+            left: 10px;
             transform: translateY(-50%) rotate(-90deg);
             transform-origin: left center;
         }
         
         /* Preview line styles for drag operation */
         .gl-preview-line {
-            position: fixed;
+            position: absolute; /* Changed from fixed to absolute */
             background-color: rgba(0, 255, 0, 0.5);
             z-index: 2147483642;
             pointer-events: none;
@@ -149,13 +149,13 @@
         
         .gl-preview-horizontal {
             left: 0;
-            right: 0;
+            width: 100%; /* Ensure it spans the full width */
             height: 2px;
         }
         
         .gl-preview-vertical {
             top: 0;
-            bottom: 0;
+            height: 100%; /* Ensure it spans the full height */
             width: 2px;
         }
     `;
@@ -218,29 +218,47 @@
         page: `guidelines_page_${window.location.hostname}${window.location.pathname}`
     };
 
-    // Add horizontal line - modified to work with fixed positioning
+    // Add horizontal line - modified to work with absolute positioning
     function addHorizontalLine(yPosition = 100) {
         const line = document.createElement('div');
         line.className = 'gl-horizontal-line';
-        line.style.top = yPosition + 'px';
+        
+        // Account for scroll position when setting the top position
+        line.style.top = (yPosition + window.scrollY) + 'px';
+        
+        // Set width to cover the entire document width
+        line.style.width = Math.max(
+            document.documentElement.scrollWidth,
+            document.body.scrollWidth
+        ) + 'px';
+        
         document.body.appendChild(line);
         
         makeDraggable(line, 'horizontal');
-        guidelines.horizontal.push({line, position: yPosition});
+        guidelines.horizontal.push({line, position: yPosition + window.scrollY});
         
         // Update measurement between lines
         updateHorizontalMeasurements();
     }
 
-    // Add vertical line - modified to work with fixed positioning
+    // Add vertical line - modified to work with absolute positioning
     function addVerticalLine(xPosition = 100) {
         const line = document.createElement('div');
         line.className = 'gl-vertical-line';
-        line.style.left = xPosition + 'px';
+        
+        // Account for scroll position when setting the left position
+        line.style.left = (xPosition + window.scrollX) + 'px';
+        
+        // Set height to cover the entire document height
+        line.style.height = Math.max(
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight
+        ) + 'px';
+        
         document.body.appendChild(line);
         
         makeDraggable(line, 'vertical');
-        guidelines.vertical.push({line, position: xPosition});
+        guidelines.vertical.push({line, position: xPosition + window.scrollX});
         
         // Update measurement between lines
         updateVerticalMeasurements();
@@ -273,11 +291,15 @@
                 createHorizontalMeasurement(pos1, pos2, distance);
             }
             
-            // Add measurement from last line to bottom of viewport
+            // Add measurement from last line to bottom of document
             const lastPos = parseInt(sorted[sorted.length - 1].line.style.top);
-            const distanceToBottom = window.innerHeight - lastPos;
+            const docHeight = Math.max(
+                document.documentElement.scrollHeight, 
+                document.body.scrollHeight
+            );
+            const distanceToBottom = docHeight - lastPos;
             if (distanceToBottom > 0) {
-                createHorizontalMeasurement(lastPos, window.innerHeight, distanceToBottom);
+                createHorizontalMeasurement(lastPos, docHeight, distanceToBottom);
             }
         }
     }
@@ -340,7 +362,7 @@
 
     // Make lines draggable
     function makeDraggable(element, type) {
-        let startX, startY, startPos;
+        let startX, startY, startPos, startScrollX, startScrollY;
         
         element.addEventListener('mousedown', startDrag);
         
@@ -348,6 +370,8 @@
             e.preventDefault();
             startX = e.clientX;
             startY = e.clientY;
+            startScrollX = window.scrollX;
+            startScrollY = window.scrollY;
             
             if (type === 'horizontal') {
                 startPos = parseInt(element.style.top);
@@ -361,7 +385,9 @@
         
         function drag(e) {
             if (type === 'horizontal') {
-                const newPos = startPos + (e.clientY - startY);
+                // Account for both mouse movement and scroll position changes
+                const scrollDiffY = window.scrollY - startScrollY;
+                const newPos = startPos + (e.clientY - startY) + scrollDiffY;
                 element.style.top = newPos + 'px';
                 
                 // Update the line's position in the guidelines array
@@ -373,7 +399,9 @@
                 // Update between-line measurements
                 updateHorizontalMeasurements();
             } else {
-                const newPos = startPos + (e.clientX - startX);
+                // Account for both mouse movement and scroll position changes
+                const scrollDiffX = window.scrollX - startScrollX;
+                const newPos = startPos + (e.clientX - startX) + scrollDiffX;
                 element.style.left = newPos + 'px';
                 
                 // Update the line's position in the guidelines array
@@ -462,8 +490,10 @@
         if (!isDragging || !previewLine) return;
         
         if (dragType === 'horizontal') {
+            // When creating a new line from the bar, include scroll position
             addHorizontalLine(e.clientY);
         } else {
+            // When creating a new line from the bar, include scroll position
             addVerticalLine(e.clientX);
         }
         
