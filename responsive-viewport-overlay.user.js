@@ -18,6 +18,11 @@
 (function () {
   'use strict';
 
+  // Check if we're in the top-level document
+  if (window.self !== window.top) {
+    return; // Exit if we're in a frame
+  }
+
   const SCRIPT_VERSION = typeof GM_info !== 'undefined' ? GM_info.script.version : 'unknown';
 
   const TOGGLE_KEY_COMBO = {
@@ -233,6 +238,17 @@
   const overlay = document.createElement('div');
   overlay.id = 'overlay';
   shadow.appendChild(overlay);
+  
+  // Log information about the overlay container to the console
+  console.log(
+    `%c Responsive Viewport Overlay %c v${SCRIPT_VERSION} %c loaded`,
+    'background: #800000; color: white; padding: 2px 4px; border-radius: 3px 0 0 3px;',
+    'background: #333; color: white; padding: 2px 4px;',
+    'background: #4CAF50; color: white; padding: 2px 4px; border-radius: 0 3px 3px 0;'
+  );
+  console.log(`Toggle shortcut: ${TOGGLE_KEY}`);
+  console.log(`Host domain: ${domainKey}`);
+  console.log('Container node:', overlay);
 
   const header = document.createElement('div');
   header.style.display = 'flex';
@@ -284,16 +300,25 @@
   const devices = [
     { w: 320, h: 568 },
     { w: 375, h: 667 },
-    { w: 414, h: 896 },
+    { w: 425, h: 896 },
     { w: 768, h: 1024 },
-    { w: 1024, h: 1366 },
-    { w: 1440, h: 900 }
+    { w: 1440, h: 1366 },
+    { w: 2560, h: 900 }
   ];
 
   devices.forEach(d => {
+    const label = d.h ? `${d.w}×${d.h}` : `${d.w}px`;
+    const title = d.h ? 
+      `Open new window at ${d.w}x${d.h}` : 
+      `Open new window with width ${d.w}px`;
+      
     controls.appendChild(
-      btn(`${d.w}×${d.h}`, `Open new window at ${d.w}x${d.h}`, () => {
-        window.open(location.href, '_blank', `width=${d.w},height=${d.h},resizable=yes`);
+      btn(label, title, () => {
+        let windowFeatures = `width=${d.w},resizable=yes`;
+        if (d.h) {
+          windowFeatures += `,height=${d.h}`;
+        }
+        window.open(location.href, '_blank', windowFeatures);
       })
     );
   });
@@ -348,20 +373,27 @@
   const widthInput = document.createElement('input');
   widthInput.type = 'number';
   widthInput.min = 100;
-  widthInput.placeholder = 'Width';
+  widthInput.placeholder = 'Width (required)';
+  widthInput.required = true;
 
   const heightInput = document.createElement('input');
   heightInput.type = 'number';
   heightInput.min = 100;
-  heightInput.placeholder = 'Height';
+  heightInput.placeholder = 'Height (optional)';
 
   const applyBtn = btn('Set', 'Open new window with custom size', () => {
     const w = parseInt(widthInput.value);
     const h = parseInt(heightInput.value);
-    if (!isNaN(w) && !isNaN(h)) {
-      window.open(location.href, '_blank', `width=${w},height=${h},resizable=yes`);
+    
+    if (!isNaN(w)) {
+      let windowFeatures = `width=${w},resizable=yes`;
+      // Only add height if it's provided and valid
+      if (!isNaN(h)) {
+        windowFeatures += `,height=${h}`;
+      }
+      window.open(location.href, '_blank', windowFeatures);
     } else {
-      alert('Please enter valid dimensions');
+      alert('Please enter a valid width');
     }
   });
 
@@ -422,6 +454,7 @@
       widthInput.min = '100';
       widthInput.value = device.w;
       widthInput.placeholder = 'Width';
+      widthInput.required = true;
       
       const separator = document.createElement('span');
       separator.textContent = '×';
@@ -429,8 +462,8 @@
       const heightInput = document.createElement('input');
       heightInput.type = 'number';
       heightInput.min = '100';
-      heightInput.value = device.h;
-      heightInput.placeholder = 'Height';
+      heightInput.value = device.h || ''; // Use empty string if height is not defined
+      heightInput.placeholder = 'Optional';
       
       deviceRow.appendChild(widthInput);
       deviceRow.appendChild(separator);
@@ -614,10 +647,13 @@
     const presetRows = settingsContainer.querySelectorAll('.device-preset');
     const newDevices = Array.from(presetRows).map(row => {
       const inputs = row.querySelectorAll('input');
-      return {
-        w: parseInt(inputs[0].value, 10) || 320,
-        h: parseInt(inputs[1].value, 10) || 568
-      };
+      const width = parseInt(inputs[0].value, 10) || 320;
+      const height = parseInt(inputs[1].value, 10) || 0;
+      
+      // Only include height if it's a valid number greater than 0
+      return height > 0 ? 
+        { w: width, h: height } : 
+        { w: width };
     });
     
     // Save to localStorage
@@ -638,15 +674,24 @@
   function updateDeviceButtons(newDevices) {
     // Clear existing device buttons
     controls.querySelectorAll('button').forEach(button => {
-      if (button.textContent.includes('×')) {
+      if (button.textContent.includes('×') || button.textContent.includes('px')) {
         button.remove();
       }
     });
     
     // Create new device buttons at the start
     newDevices.slice().reverse().forEach(d => {
-      const newBtn = btn(`${d.w}×${d.h}`, `Open new window at ${d.w}x${d.h}`, () => {
-        window.open(location.href, '_blank', `width=${d.w},height=${d.h},resizable=yes`);
+      const label = d.h ? `${d.w}×${d.h}` : `${d.w}px`;
+      const title = d.h ? 
+        `Open new window at ${d.w}x${d.h}` : 
+        `Open new window with width ${d.w}px`;
+        
+      const newBtn = btn(label, title, () => {
+        let windowFeatures = `width=${d.w},resizable=yes`;
+        if (d.h) {
+          windowFeatures += `,height=${d.h}`;
+        }
+        window.open(location.href, '_blank', windowFeatures);
       });
       controls.insertBefore(newBtn, controls.firstChild);
     });
