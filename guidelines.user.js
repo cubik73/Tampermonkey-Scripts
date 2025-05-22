@@ -141,9 +141,9 @@
         
         /* Preview line styles for drag operation */
         .gl-preview-line {
-            position: absolute; /* Changed from fixed to absolute */
+            position: absolute;
             background-color: rgba(0, 255, 0, 0.5);
-            z-index: 2147483642;
+            z-index: 2147483644; /* Updated to match the guidelines z-index */
             pointer-events: none;
         }
         
@@ -447,10 +447,10 @@
             isDragging = true;
             dragType = 'horizontal';
             
-            // Create a preview line
+            // Create a preview line with scroll position included
             previewLine = document.createElement('div');
             previewLine.className = 'gl-preview-line gl-preview-horizontal';
-            previewLine.style.top = e.clientY + 'px';
+            previewLine.style.top = (e.clientY + window.scrollY) + 'px';
             document.body.appendChild(previewLine);
             
             document.addEventListener('mousemove', handleBarDragMove);
@@ -463,10 +463,10 @@
             isDragging = true;
             dragType = 'vertical';
             
-            // Create a preview line
+            // Create a preview line with scroll position included
             previewLine = document.createElement('div');
             previewLine.className = 'gl-preview-line gl-preview-vertical';
-            previewLine.style.left = e.clientX + 'px';
+            previewLine.style.left = (e.clientX + window.scrollX) + 'px';
             document.body.appendChild(previewLine);
             
             document.addEventListener('mousemove', handleBarDragMove);
@@ -479,9 +479,11 @@
         if (!isDragging || !previewLine) return;
         
         if (dragType === 'horizontal') {
-            previewLine.style.top = e.clientY + 'px';
+            // Add scroll position when positioning the preview line
+            previewLine.style.top = (e.clientY + window.scrollY) + 'px';
         } else {
-            previewLine.style.left = e.clientX + 'px';
+            // Add scroll position when positioning the preview line
+            previewLine.style.left = (e.clientX + window.scrollX) + 'px';
         }
     }
     
