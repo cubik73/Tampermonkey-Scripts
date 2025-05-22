@@ -92,25 +92,27 @@
             position: absolute;
             left: 0;
             right: 0;
-            height: 0;
+            height: 9px; /* Increased height for better hit target */
             border-top: 1px solid green;
             cursor: ns-resize;
             z-index: 2147483644;
             pointer-events: auto;
-            margin: 0;
+            margin: -4px 0 0 0; /* Center the line within the hit area */
             padding: 0;
+            background-color: transparent; /* Keep background transparent */
         }
         .gl-vertical-line {
             position: absolute;
             top: 0;
             bottom: 0;
-            width: 0;
+            width: 9px; /* Increased width for better hit target */
             border-left: 1px solid green;
             cursor: ew-resize;
             z-index: 2147483644;
             pointer-events: auto;
-            margin: 0;
+            margin: 0 0 0 -4px; /* Center the line within the hit area */
             padding: 0;
+            background-color: transparent; /* Keep background transparent */
         }
         
         .gl-measurement-bar-top {
@@ -560,11 +562,13 @@
         if (!isDragging || !previewLine) return;
         
         if (dragType === 'horizontal') {
-            // When creating a new line from the bar, include scroll position
-            addHorizontalLine(e.clientY);
+            // Use exact position of preview line, accounting for the -4px top margin in horizontal lines
+            const exactPosition = parseInt(previewLine.style.top);
+            addHorizontalLineExact(exactPosition);
         } else {
-            // When creating a new line from the bar, include scroll position
-            addVerticalLine(e.clientX);
+            // Use exact position of preview line, accounting for the -4px left margin in vertical lines
+            const exactPosition = parseInt(previewLine.style.left);
+            addVerticalLineExact(exactPosition);
         }
         
         // Clean up
@@ -575,6 +579,56 @@
         
         document.removeEventListener('mousemove', handleBarDragMove);
         document.removeEventListener('mouseup', handleBarDragEnd);
+    }
+    
+    // New function that positions horizontal line at exact pixel position
+    function addHorizontalLineExact(exactPosition) {
+        const line = document.createElement('div');
+        line.className = 'gl-horizontal-line';
+        
+        // Adjust position to account for the -4px top margin in horizontal lines
+        const adjustedPosition = exactPosition + 4; // Add 4px to compensate for the -4px margin
+        line.style.top = adjustedPosition + 'px';
+        
+        // Set width to cover the entire document width
+        line.style.width = Math.max(
+            document.documentElement.scrollWidth,
+            document.body.scrollWidth
+        ) + 'px';
+        
+        document.body.appendChild(line);
+        
+        makeDraggable(line, 'horizontal');
+        addRemovalHandler(line, 'horizontal');
+        guidelines.horizontal.push({line, position: adjustedPosition});
+        
+        // Update measurement between lines
+        updateHorizontalMeasurements();
+    }
+    
+    // Function updated to account for margin offset
+    function addVerticalLineExact(exactPosition) {
+        const line = document.createElement('div');
+        line.className = 'gl-vertical-line';
+        
+        // Adjust position to account for the -4px left margin in vertical lines
+        const adjustedPosition = exactPosition + 4; // Add 4px to compensate for the -4px margin
+        line.style.left = adjustedPosition + 'px';
+        
+        // Set height to cover the entire document height
+        line.style.height = Math.max(
+            document.documentElement.scrollHeight,
+            document.body.scrollHeight
+        ) + 'px';
+        
+        document.body.appendChild(line);
+        
+        makeDraggable(line, 'vertical');
+        addRemovalHandler(line, 'vertical');
+        guidelines.vertical.push({line, position: adjustedPosition});
+        
+        // Update measurement between lines
+        updateVerticalMeasurements();
     }
 
     // Serialize guidelines for storage
