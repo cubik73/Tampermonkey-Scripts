@@ -36,7 +36,7 @@
             background: white;
             border: 1px solid #ccc;
             padding: 10px;
-            z-index: 10000;
+            z-index: 2147483645; /* Very high z-index */
             box-shadow: 0 0 5px rgba(0,0,0,0.3);
             font-family: Arial, sans-serif;
             font-size: 14px;
@@ -45,6 +45,15 @@
             padding: 5px;
             margin: 2px;
             cursor: pointer;
+        }
+        .storage-controls {
+            margin-top: 10px;
+            padding-top: 5px;
+            border-top: 1px solid #ddd;
+        }
+        .storage-controls select {
+            width: 100%;
+            margin-bottom: 5px;
         }
         ::host {
             all: initial;
@@ -56,22 +65,28 @@
     const globalStyles = document.createElement('style');
     globalStyles.textContent = `
         .gl-horizontal-line {
-            position: absolute;
-            width: 100%;
-            height: 1px;
+            position: fixed; /* Changed from absolute to fixed for better overlay */
+            left: 0;
+            right: 0;
+            height: 0;
             border-top: 2px dashed green;
             cursor: ns-resize;
-            z-index: 9999;
+            z-index: 2147483644; /* Extremely high z-index to overlay almost everything */
             pointer-events: auto;
+            margin: 0;
+            padding: 0;
         }
         .gl-vertical-line {
-            position: absolute;
-            height: 100%;
-            width: 1px;
+            position: fixed; /* Changed from absolute to fixed for better overlay */
+            top: 0;
+            bottom: 0;
+            width: 0;
             border-left: 2px dashed green;
             cursor: ew-resize;
-            z-index: 9999;
+            z-index: 2147483644; /* Extremely high z-index to overlay almost everything */
             pointer-events: auto;
+            margin: 0;
+            padding: 0;
         }
         
         /* Measurement bars along edges */
@@ -82,7 +97,7 @@
             right: 0;
             height: 24px;
             background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9998;
+            z-index: 2147483643;
             pointer-events: auto; /* Enable pointer events for dragging from bar */
             cursor: row-resize;
         }
@@ -94,7 +109,7 @@
             bottom: 0;
             width: 24px;
             background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9998;
+            z-index: 2147483643;
             pointer-events: auto; /* Enable pointer events for dragging from bar */
             cursor: col-resize;
         }
@@ -104,7 +119,7 @@
             color: #00ff00;
             font-size: 12px;
             font-family: Arial, sans-serif;
-            z-index: 10001;
+            z-index: 2147483646; /* Highest z-index for measurements */
             pointer-events: none;
             display: flex;
             justify-content: center;
@@ -126,19 +141,21 @@
         
         /* Preview line styles for drag operation */
         .gl-preview-line {
-            position: absolute;
+            position: fixed;
             background-color: rgba(0, 255, 0, 0.5);
-            z-index: 9997;
+            z-index: 2147483642;
             pointer-events: none;
         }
         
         .gl-preview-horizontal {
-            width: 100%;
+            left: 0;
+            right: 0;
             height: 2px;
         }
         
         .gl-preview-vertical {
-            height: 100%;
+            top: 0;
+            bottom: 0;
             width: 2px;
         }
     `;
@@ -164,6 +181,16 @@
         <div style="margin-top: 5px;">
             <button id="clear-lines">Clear All Lines</button>
         </div>
+        <div class="storage-controls">
+            <select id="storage-scope">
+                <option value="page">This Page</option>
+                <option value="site">Entire Site</option>
+                <option value="global">Global</option>
+            </select>
+            <button id="save-guidelines">Save Guidelines</button>
+            <button id="load-guidelines">Load Guidelines</button>
+            <button id="delete-guidelines">Delete Saved</button>
+        </div>
     `;
     shadow.appendChild(controlPanel);
 
@@ -184,7 +211,14 @@
     let dragType = null;
     let previewLine = null;
 
-    // Add horizontal line
+    // Storage keys
+    const STORAGE_KEYS = {
+        global: 'guidelines_global',
+        site: `guidelines_site_${window.location.hostname}`,
+        page: `guidelines_page_${window.location.hostname}${window.location.pathname}`
+    };
+
+    // Add horizontal line - modified to work with fixed positioning
     function addHorizontalLine(yPosition = 100) {
         const line = document.createElement('div');
         line.className = 'gl-horizontal-line';
@@ -198,7 +232,7 @@
         updateHorizontalMeasurements();
     }
 
-    // Add vertical line
+    // Add vertical line - modified to work with fixed positioning
     function addVerticalLine(xPosition = 100) {
         const line = document.createElement('div');
         line.className = 'gl-vertical-line';
@@ -429,6 +463,128 @@
         document.removeEventListener('mouseup', handleBarDragEnd);
     }
 
+    // Serialize guidelines for storage
+    function serializeGuidelines() {
+        const horizontalPositions = guidelines.horizontal.map(item => parseInt(item.line.style.top));
+        const verticalPositions = guidelines.vertical.map(item => parseInt(item.line.style.left));
+        
+        return {
+            horizontal: horizontalPositions,
+            vertical: verticalPositions,
+            timestamp: Date.now()
+        };
+    }
+    
+    // Save guidelines to storage
+    function saveGuidelines() {
+        const storageScope = shadow.getElementById('storage-scope').value;
+        const key = STORAGE_KEYS[storageScope];
+        const data = serializeGuidelines();
+        
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+            alert(`Guidelines saved for ${storageScope} scope`);
+        } catch (e) {
+            alert('Failed to save guidelines: ' + e.message);
+        }
+    }
+    
+    // Load guidelines from storage
+    function loadGuidelines() {
+        const storageScope = shadow.getElementById('storage-scope').value;
+        const key = STORAGE_KEYS[storageScope];
+        
+        try {
+            const savedData = localStorage.getItem(key);
+            if (!savedData) {
+                alert(`No saved guidelines found for ${storageScope} scope`);
+                return;
+            }
+            
+            const data = JSON.parse(savedData);
+            
+            // Clear existing guidelines
+            clearAllLines();
+            
+            // Load horizontal lines
+            if (data.horizontal && Array.isArray(data.horizontal)) {
+                data.horizontal.forEach(pos => {
+                    addHorizontalLine(pos);
+                });
+            }
+            
+            // Load vertical lines
+            if (data.vertical && Array.isArray(data.vertical)) {
+                data.vertical.forEach(pos => {
+                    addVerticalLine(pos);
+                });
+            }
+            
+            alert(`Guidelines loaded from ${storageScope} scope`);
+        } catch (e) {
+            alert('Failed to load guidelines: ' + e.message);
+        }
+    }
+    
+    // Delete saved guidelines
+    function deleteSavedGuidelines() {
+        const storageScope = shadow.getElementById('storage-scope').value;
+        const key = STORAGE_KEYS[storageScope];
+        
+        try {
+            localStorage.removeItem(key);
+            alert(`Saved guidelines deleted for ${storageScope} scope`);
+        } catch (e) {
+            alert('Failed to delete guidelines: ' + e.message);
+        }
+    }
+    
+    // Auto-load guidelines based on availability and priority
+    function autoLoadGuidelines() {
+        // Try to load in order: page specific, site-wide, global
+        const pageData = localStorage.getItem(STORAGE_KEYS.page);
+        const siteData = localStorage.getItem(STORAGE_KEYS.site);
+        const globalData = localStorage.getItem(STORAGE_KEYS.global);
+        
+        let dataToLoad = null;
+        let sourceScope = '';
+        
+        if (pageData) {
+            dataToLoad = pageData;
+            sourceScope = 'page';
+        } else if (siteData) {
+            dataToLoad = siteData;
+            sourceScope = 'site';
+        } else if (globalData) {
+            dataToLoad = globalData;
+            sourceScope = 'global';
+        }
+        
+        if (dataToLoad) {
+            try {
+                const data = JSON.parse(dataToLoad);
+                
+                // Load horizontal lines
+                if (data.horizontal && Array.isArray(data.horizontal)) {
+                    data.horizontal.forEach(pos => {
+                        addHorizontalLine(pos);
+                    });
+                }
+                
+                // Load vertical lines
+                if (data.vertical && Array.isArray(data.vertical)) {
+                    data.vertical.forEach(pos => {
+                        addVerticalLine(pos);
+                    });
+                }
+                
+                console.log(`Guidelines auto-loaded from ${sourceScope} scope`);
+            } catch (e) {
+                console.error('Failed to auto-load guidelines:', e);
+            }
+        }
+    }
+
     // Initialize drag from bar functionality
     setupBarDragHandlers();
 
@@ -436,6 +592,9 @@
     const addHorizontalBtn = shadow.getElementById('add-horizontal');
     const addVerticalBtn = shadow.getElementById('add-vertical');
     const clearLinesBtn = shadow.getElementById('clear-lines');
+    const saveGuidelinesBtn = shadow.getElementById('save-guidelines');
+    const loadGuidelinesBtn = shadow.getElementById('load-guidelines');
+    const deleteGuidelinesBtn = shadow.getElementById('delete-guidelines');
     
     addHorizontalBtn.addEventListener('click', () => {
         addHorizontalLine(Math.floor(window.innerHeight / 2));
@@ -446,4 +605,10 @@
     });
     
     clearLinesBtn.addEventListener('click', clearAllLines);
+    saveGuidelinesBtn.addEventListener('click', saveGuidelines);
+    loadGuidelinesBtn.addEventListener('click', loadGuidelines);
+    deleteGuidelinesBtn.addEventListener('click', deleteSavedGuidelines);
+    
+    // Auto-load any saved guidelines when the script initializes
+    autoLoadGuidelines();
 })();
