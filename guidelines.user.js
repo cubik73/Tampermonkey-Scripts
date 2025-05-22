@@ -158,6 +158,11 @@
             height: 100%; /* Ensure it spans the full height */
             width: 2px;
         }
+        
+        .gl-horizontal-line:hover, .gl-vertical-line:hover {
+            border-color: red;
+            border-width: 3px;
+        }
     `;
     document.head.appendChild(globalStyles);
 
@@ -218,7 +223,7 @@
         page: `guidelines_page_${window.location.hostname}${window.location.pathname}`
     };
 
-    // Add horizontal line - modified to work with absolute positioning
+    // Add horizontal line - modified to include removal handler
     function addHorizontalLine(yPosition = 100) {
         const line = document.createElement('div');
         line.className = 'gl-horizontal-line';
@@ -235,13 +240,14 @@
         document.body.appendChild(line);
         
         makeDraggable(line, 'horizontal');
+        addRemovalHandler(line, 'horizontal'); // Add right-click handler
         guidelines.horizontal.push({line, position: yPosition + window.scrollY});
         
         // Update measurement between lines
         updateHorizontalMeasurements();
     }
 
-    // Add vertical line - modified to work with absolute positioning
+    // Add vertical line - modified to include removal handler
     function addVerticalLine(xPosition = 100) {
         const line = document.createElement('div');
         line.className = 'gl-vertical-line';
@@ -258,6 +264,7 @@
         document.body.appendChild(line);
         
         makeDraggable(line, 'vertical');
+        addRemovalHandler(line, 'vertical'); // Add right-click handler
         guidelines.vertical.push({line, position: xPosition + window.scrollX});
         
         // Update measurement between lines
@@ -625,11 +632,47 @@
                 }
                 
                 console.log(`Guidelines auto-loaded from ${sourceScope} scope`);
+                
+                // Add this line to ensure dimensions are updated after loading
+                setTimeout(updateGuidelineDimensions, 500);
             } catch (e) {
                 console.error('Failed to auto-load guidelines:', e);
             }
         }
     }
+
+    // Add a function to update guideline dimensions
+    function updateGuidelineDimensions() {
+        const docHeight = Math.max(
+            document.documentElement.scrollHeight, 
+            document.body.scrollHeight
+        );
+        const docWidth = Math.max(
+            document.documentElement.scrollWidth,
+            document.body.scrollWidth
+        );
+        
+        // Update heights of all vertical lines
+        guidelines.vertical.forEach(item => {
+            item.line.style.height = docHeight + 'px';
+        });
+        
+        // Update widths of all horizontal lines
+        guidelines.horizontal.forEach(item => {
+            item.line.style.width = docWidth + 'px';
+        });
+        
+        // Update measurements
+        updateVerticalMeasurements();
+        updateHorizontalMeasurements();
+    }
+
+    // Listen for events that might change page dimensions
+    window.addEventListener('resize', updateGuidelineDimensions);
+    window.addEventListener('load', updateGuidelineDimensions);
+
+    // For dynamically loaded content, periodically check dimensions
+    const dimensionCheckInterval = setInterval(updateGuidelineDimensions, 2000);
 
     // Initialize drag from bar functionality
     setupBarDragHandlers();
@@ -657,4 +700,23 @@
     
     // Auto-load any saved guidelines when the script initializes
     autoLoadGuidelines();
+
+    // Add this function to your script
+    function addRemovalHandler(line, type) {
+        line.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // Prevent the regular context menu
+            
+            // Remove the line from DOM
+            document.body.removeChild(line);
+            
+            // Remove from guidelines array
+            if (type === 'horizontal') {
+                guidelines.horizontal = guidelines.horizontal.filter(item => item.line !== line);
+                updateHorizontalMeasurements();
+            } else {
+                guidelines.vertical = guidelines.vertical.filter(item => item.line !== line);
+                updateVerticalMeasurements();
+            }
+        });
+    }
 })();
