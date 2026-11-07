@@ -1,9 +1,15 @@
 // ==UserScript==
 // @name         Image Intrinsic vs Displayed Size Highlighter
-// @namespace    https://seegreen.uk/tools
+// @namespace    http://tampermonkey.net/
 // @version      1.6.1
 // @description  Highlights <img> elements whose displayed size differs significantly from their intrinsic (natural) size — especially images downloaded much larger than they're shown, which waste bandwidth — and gives well-sized images a green outline. Also labels each <img> with the filename of its currently selected source.
-// @author       robert.wood@seegreen.uk
+// @author       Rob Wood
+// @license      MIT
+// @icon         https://www.google.com/s2/favicons?sz=64&domain=robertwood.me
+// @homepage     https://github.com/cubik73/Tampermonkey-Scripts/
+// @supportURL   https://github.com/cubik73/Tampermonkey-Scripts/issues
+// @updateURL    https://raw.githubusercontent.com/cubik73/Tampermonkey-Scripts/main/image-size.user.js
+// @downloadURL  https://raw.githubusercontent.com/cubik73/Tampermonkey-Scripts/main/image-size.user.js
 // @match        *://*/*
 // @run-at       document-idle
 // @grant        GM_addStyle
