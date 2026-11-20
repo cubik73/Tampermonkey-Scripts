@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Webpage Guidelines
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.1.1
 // @description  Add moveable horizontal and vertical guide lines to webpages
 // @author       Rob Wood
 // @license      MIT
@@ -79,7 +79,7 @@
             width: 100%;
             margin-bottom: 5px;
         }
-        ::host {
+        :host {
             all: initial;
         }
     `;
@@ -944,9 +944,9 @@
         }
     }
 
-    // Call restore functions when initializing
-    window.addEventListener('DOMContentLoaded', () => {
-        restorePosition();
-        restoreCollapsedState();
-    });
+    // Restore the saved panel position and collapsed state straight away.
+    // The script runs at document-end, which is when DOMContentLoaded fires,
+    // so a DOMContentLoaded listener added here would be too late to run.
+    restorePosition();
+    restoreCollapsedState();
 })();

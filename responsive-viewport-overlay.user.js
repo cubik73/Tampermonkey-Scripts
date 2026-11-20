@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Responsive Viewport Overlay
 // @namespace    http://tampermonkey.net/
-// @version      1.8.4.3
+// @version      1.8.4.4
 // @description  Adds a movable and customizable overlay to any webpage, showing the current viewport dimensions. It’s designed to help web developers and designers quickly simulate screen sizes and test responsive layouts in real time.
 // @author       Rob Wood
 // @license      MIT
@@ -52,9 +52,11 @@
   // === Shadow DOM Setup ===
   const overlayHost = document.createElement('div');
   overlayHost.id = 'viewport-dimensions-overlay-host';
+  // Reset first: setting the 'all' shorthand afterwards would wipe out
+  // the position and z-index set below.
+  overlayHost.style.all = 'initial';
   overlayHost.style.position = 'fixed';
   overlayHost.style.zIndex = '999999999';
-  overlayHost.style.all = 'initial';
   document.body.appendChild(overlayHost);
 
   const shadow = overlayHost.attachShadow({ mode: 'open' });
